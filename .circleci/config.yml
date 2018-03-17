@@ -7,29 +7,29 @@ jobs:
       - checkout
       - run:
           name: Check what's in /repo
-          command: ls /repo
+          command: ls ~/repo
       - run:
           name: Build alpine bot server binary
           command: |
             echo 'Starting botserver-builder'
             docker run -d --entrypoint sh --name botserver-builder mrp4p3r/pyinstaller-alpine-py3 -c 'sleep 1h'
             echo 'Copying sources to botserver-builder'
-            docker cp /repo/. botserver-builder:/src
+            docker cp ~/repo/. botserver-builder:/src
             echo 'Running build in botserver-builder'
             docker exec botserver-builder /pyinstaller/pyinstaller.sh \
                 --noconfirm --log-level DEBUG --distpath /src/dist-alpine main.py
             echo 'Creating directory for dist-alpine'
-            mkdir -p /repo/dist-alpine
+            mkdir -p ~/repo/dist-alpine
             echo 'Copying build back to dist-alpine'
-            docker cp botserver-builder:/src/dist-alpine/main /repo/dist-alpine
+            docker cp botserver-builder:/src/dist-alpine/main ~/repo/dist-alpine
       - run:
           name: Build Docker image for bot
-          command: docker build -t app .
+          command: docker build -t mrp4p3r/recrierbot .
       - deploy:
           name: Push Docker image
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               docker login -u $DOCKER_USER -p $DOCKER_PASS
-              docker tag app mrp4p3r/recrierbot
               docker push mrp4p3r/recrierbot
             fi
+            docker rmi mrp4p3r/recrierbot
