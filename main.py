@@ -30,10 +30,19 @@ THREADS_NUMBER = int(os.environ.get('THREADS_NUMBER', 4))
 TORNADO_PORT = int(os.environ.get('TORNADO_PORT', 8080))
 
 
-logging.getLogger().setLevel(logging.INFO)
-logging.getLogger('tornado.access').setLevel(logging.INFO)
-logging.getLogger('tornado.general').setLevel(logging.INFO)
-logging.getLogger('tornado.application').setLevel(logging.INFO)
+LOGLEVEL = os.environ.get('LOGGING_LEVEL', 'WARNING')
+if LOGLEVEL.isnumeric():
+    LOGLEVEL = int(LOGLEVEL)
+else:
+    try:
+        LOGLEVEL = getattr(logging, LOGLEVEL)
+    except Exception:
+        logging.exception(f'No such logging level: {LOGLEVEL}')
+
+logging.getLogger().setLevel(LOGLEVEL)
+logging.getLogger('tornado.access').setLevel(LOGLEVEL)
+logging.getLogger('tornado.general').setLevel(LOGLEVEL)
+logging.getLogger('tornado.application').setLevel(LOGLEVEL)
 
 
 # = = = = =
@@ -284,6 +293,17 @@ class TelegramHookHandler(tornado.web.RequestHandler):
         bot_dispatcher.process_update(update)
 
 
+class StatusHandler(tornado.web.RequestHandler):
+
+    def get(self):
+        webhook_is_set_str = 'is set' if status_webhook_is_set else 'is not set'
+        self.write('Server is ok.\n'
+                   f'Webhook {webhook_is_set_str}\n')
+
+
+# = = = = =
+
+
 class run_until_no_err:
 
     def __init__(self, fn, err_callback=None):
@@ -309,11 +329,16 @@ class run_until_no_err:
                 continue
 
 
+status_webhook_is_set = False
+
+
 @run_until_no_err
 def delete_and_set_webhook():
+    global status_webhook_is_set
     bot.delete_webhook()
     logging.info(f'Setting webhook to {BOT_URL}{HOOK_TOKEN}/hook')
     bot.set_webhook(f'{BOT_URL}{HOOK_TOKEN}/hook')
+    status_webhook_is_set = True
 
 
 @delete_and_set_webhook.on_error
@@ -325,6 +350,7 @@ def main():
     app = tornado.web.Application([
         (r'/(?P<token>.*?)/send', MessageHandler),
         (rf'/{HOOK_TOKEN}/hook', TelegramHookHandler),
+        (rf'/status', StatusHandler)
     ])
 
     app.listen(TORNADO_PORT)
