@@ -1,12 +1,12 @@
 version: 2
 jobs:
   build:
-    working_directory: /repo
+    working_directory: ~/repo
     machine: true
     steps:
       - checkout
       - run:
-          name: Check what's in /repo
+          name: Check what's in ~/repo
           command: ls ~/repo
       - run:
           name: Build alpine bot server binary
