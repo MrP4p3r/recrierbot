@@ -96,6 +96,7 @@ class ChatTokenRepository:
             return cls._token_to_chat_id[token]
         chat_id = sa.select([chat_token_t.c.chat_id]).where(chat_token_t.c.token == token).scalar()
         cls._token_to_chat_id[token] = chat_id
+        return chat_id
 
     @classmethod
     def save_token_for_chat_id(cls, chat_id, token):
@@ -115,14 +116,14 @@ class ChatTokenRepository:
 
     @classmethod
     def delete_tokens(cls, tokens, chat_id):
-        query = chat_token_t.delete.where(chat_token_t.c.token.in_(tokens))
+        query = chat_token_t.delete().where(chat_token_t.c.token.in_(tokens))
         if chat_id:
             query = query.where(chat_token_t.c.chat_id == chat_id)
         rowcount = query.execute().rowcount
         if rowcount:
-            cls._chat_id_to_tokens.pop(chat_id)
+            cls._chat_id_to_tokens.pop(chat_id, None)
             for token in tokens:
-                cls._token_to_chat_id.pop(token)
+                cls._token_to_chat_id.pop(token, None)
             return rowcount
         else:
             return False
@@ -219,13 +220,17 @@ def cmd_ping(bot, update):
 
 
 @command_handler('deltoken', pass_args=True)
-def cmd_deltoken(bot, update, tokens):
+def cmd_deltoken(bot, update, args=None):
     """
 
     :param telegram.Bot bot:
     :param telegram.Update update:
-    :param list[str] tokens:
+    :param list[str] args:
     """
+    if not args:
+        bot.send_message(update.effective_chat.id, 'Give me tokens to delete.')
+        return
+    tokens = args
     message = update.effective_message  # type: telegram.Message
     ChatTokenRepository.delete_tokens(tokens, update.effective_chat.id)
     bot.send_message(update.effective_chat.id, emoji.emojize('Done. :heavy_check_mark:', use_aliases=True))
