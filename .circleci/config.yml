@@ -6,8 +6,11 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Check what's in ~/repo
-          command: ls ~/repo
+          name: Check what's in ~/repo and docker user var
+          command: |
+            ls ~/repo
+            echo $DOCKER_USER
+            echo ${DOCKER_USER}
       - run:
           name: Build alpine bot server binary
           command: |
