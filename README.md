@@ -28,8 +28,6 @@ services:
   recrier:
     container_name: recrierbot-container
     image: mrp4p3r/recrierbot
-    networks:
-      - docker-subnet-0
     volumes:
       - recrier-test-db:/var/lib/recrierbot
     environment:
