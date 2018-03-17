@@ -13,8 +13,9 @@ jobs:
       - run:
           name: Build bot's python server into single executable
           command: |
+            docker run --rm -v /repo:/src mrp4p3r/pyinstaller-alpine-py3 ls /src/
             docker run --rm -v /repo:/src mrp4p3r/pyinstaller-alpine-py3 \
-                --noconfirm --log-level DEBUG --distpath /src/dist-alpine /src/main.py
+                --noconfirm --log-level DEBUG --distpath /src/dist-alpine main.py
       - run:
           name: Build Docker image for bot
           command: docker build -t botimage .
