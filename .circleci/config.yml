@@ -13,11 +13,16 @@ jobs:
       - run:
           name: Build alpine bot server binary
           command: |
+            echo 'Starting botserver-builder'
             docker run -d --entrypoint sh --name botserver-builder mrp4p3r/pyinstaller-alpine-py3 -c 'sleep 1h'
+            echo 'Copying sources to botserver-builder'
             docker cp /repo botserver-builder:/src
+            echo 'Running build in botserver-builder'
             docker exec botserver-builder /pyinstaller/pyinstaller.sh \
                 --noconfirm --log-level DEBUG --distpath /src/dist-alpine main.py
+            echo 'Creating directory for dist-alpine'
             mkdir -p /repo/dist-alpine
+            echo 'Copying build back to dist-alpine'
             docker cp /src/dist-alpine/main /repo/dist-alpine
       - run:
           name: Build Docker image for bot
