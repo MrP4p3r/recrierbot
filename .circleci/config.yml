@@ -29,7 +29,7 @@ jobs:
           name: Push Docker image
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker login -u $DOCKER_USER -p $DOCKER_PASS
+              docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
               docker push mrp4p3r/recrierbot
             fi
             docker rmi mrp4p3r/recrierbot
