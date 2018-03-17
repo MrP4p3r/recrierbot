@@ -31,7 +31,7 @@ jobs:
           name: Push Docker image
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+              docker login
               docker tag app mrp4p3r/recrierbot
               docker push mrp4p3r/recrierbot
             fi
