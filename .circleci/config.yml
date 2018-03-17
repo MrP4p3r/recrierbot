@@ -23,7 +23,7 @@ jobs:
             echo 'Creating directory for dist-alpine'
             mkdir -p /repo/dist-alpine
             echo 'Copying build back to dist-alpine'
-            docker cp /src/dist-alpine/main /repo/dist-alpine
+            docker cp botserver-builder:/src/dist-alpine/main /repo/dist-alpine
       - run:
           name: Build Docker image for bot
           command: docker build -t app .
