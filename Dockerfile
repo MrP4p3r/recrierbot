@@ -5,4 +5,4 @@ COPY ./start.sh /start.sh
 
 RUN chmod +x /start.sh /main
 
-CMD ["/start.sh"]
+CMD ["sh", "/start.sh"]
