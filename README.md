@@ -31,8 +31,8 @@ services:
     volumes:
       - recrier-test-db:/var/lib/recrierbot
     environment:
-      TELEGRAM_TOKEN: <Токен для бота>
-      BOT_URL: <URL, по которому доступен бот вида http://recrier.example.com/>
+      TELEGRAM_TOKEN: 123456789:ABCDEFGHiGKlMNOprStUVw-xyZOWdysnIKABC
+      BOT_URL: http://recrier.example.com/
       CHAT_TOKENS_LIMIT: 7
       LOGGING_LEVEL: INFO
       THREADS_NUMBER: 4
@@ -49,6 +49,8 @@ TELEGRAM_TOKEN и BOT_URL являются обязательными парам
 Остальные параметры опциональны. В примере выше указаны параметры по умолчанию.
 Описание параметров
 
+- `TELEGRAM_TOKEN` - Указывается в формате `123456789:ABCDEFGHiGKlMNOprStUVw-xyZOWdysnIKABC`
+- `BOT_URL` - Это базовый URL веб-хука для бота. Должен иметь протокол и доменное имя: https://mybot.example.com/
 - `CHAT_TOKENS_LIMIT` - Максимальное количество токенов для чата
 - `LOGGING_LEVEL` - Уровень логгирования (DEBUG, INFO, WARNING, ERROR или числом; Google: "python logging")
 - `THREADS_NUMBER` - Количество потоков для обработки запросов. Четырех должно быть больше чем достаточно.
