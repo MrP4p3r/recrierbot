@@ -19,7 +19,9 @@ export THREADS_NUMBER=${THREADS_NUMBER:-4}
 export TORNADO_PORT=${TORNADO_PORT:-8080}
 
 
-mkdir -p $(dirname $DB_PATH)
+if [ ! -d "$(dirname "$DB_PATH")" ]; then
+    mkdir -p $(dirname $DB_PATH) || true
+fi
 
 
 /main
