@@ -13,7 +13,7 @@ jobs:
             docker run -d --entrypoint sh --name botserver-builder mrp4p3r/pyinstaller-alpine-py3 -c 'sleep 1h'
             docker cp /repo/. botserver-builder:/src
             docker exec botserver-builder /pyinstaller/pyinstaller.sh \
-                --noconfirm --log-level DEBUG --distpath /src/dist-alpine main.py
+                --noconfirm --log-level DEBUG --distpath /src/dist-alpine -F main.py
             mkdir -p /repo/dist-alpine
             docker cp botserver-builder:/src/dist-alpine/main /repo/dist-alpine
       - run:
