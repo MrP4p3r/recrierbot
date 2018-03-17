@@ -5,7 +5,6 @@ jobs:
     machine: true
     steps:
       - checkout
-      - setup_remote_docker
       - run:
           name: Check what's in /repo
           command: ls /repo
