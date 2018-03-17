@@ -4,6 +4,9 @@ jobs:
     working_directory: /repo
     docker:
       - image: docker:18
+          auth:
+            username: $DOCKER_USER
+            password: $DOCKER_PASS
     steps:
       - checkout
       - setup_remote_docker
