@@ -1,25 +1,24 @@
 # -*- coding: utf-8 -*-
 
 import os
-import re
 import json
 import random
 import string
-import urllib.request
-import urllib.parse
-import logging
 import asyncio
 import multiprocessing.pool
 
+import telegram
+import telegram.ext
+
 import sqlalchemy as sa
+from sqlalchemy.engine.url import URL as DatabaseURL
 
 import tornado.web
 import tornado.ioloop
 
 
+BOT_URL = os.environ['BOT_URL'].rstrip('/') + '/'
 TOKEN = os.environ['TELEGRAM_TOKEN']
-HOOK_TOKEN = os.environ['TELEGRAM_HOOK_TOKEN']
-BASE_URL = f'https://api.telegram.org/bot{TOKEN}/'
 
 CHAT_TOKENS_LIMIT = os.environ.get('CHAT_TOKENS_LIMIT', 7)
 
@@ -30,8 +29,8 @@ TORNADO_PORT = int(os.environ.get('TORNADO_PORT', 8080))
 
 # = = = = =
 
-
-db_engine = sa.create_engine(DB_PATH, pool_size=THREADS_NUMBER)
+db_url = DatabaseURL('sqlite', database='/var/lib/qeq.db')
+db_engine = sa.create_engine(db_url)
 meta = sa.MetaData(bind=db_engine)
 
 chat_token_t = sa.Table(
@@ -92,7 +91,7 @@ class ChatTokenRepository:
 
 def generate_token():
     token = _generate_token()
-    while token == HOOK_TOKEN:
+    while token == globals().get('HOOK_TOKEN'):
         token = _generate_token()
     return token
 
@@ -103,29 +102,101 @@ def _generate_token():
     return token
 
 
+HOOK_TOKEN = generate_token()
+
+
 # = = = = =
 
 
-def send_message_to_chat(chat_id, message):
-    payload = {'chat_id': str(chat_id),
-               'text': message,
-               'disable_web_page_preview': 'true'}
-    try:
-        resp = urllib.request.urlopen(f'{BASE_URL}sendMessage', payload).read()
+bot = telegram.Bot(TOKEN)
+bot_dispatcher = telegram.ext.Dispatcher(bot, None, workers=0)
+
+
+def command_handler(cmd_name, **kwargs):
+    def outer(fn):
+        handler = telegram.ext.CommandHandler(cmd_name, fn, **kwargs)
+        bot_dispatcher.add_handler(handler)
+        return fn
+    return outer
+
+
+def message_handler(fn):
+    handler = telegram.ext.MessageHandler(None, fn)
+    bot_dispatcher.add_handler(handler)
+    return fn
+
+
+@message_handler
+def msg_hahndler(bot, update):
+    """
+
+    :param telegram.Bot bot:
+    :param telegram.Update update:
+    """
+    bot.send_message(update.effective_chat.id, 'What? :sweat_smile:')
+
+
+@command_handler('start')
+def cmd_start(bot, update):
+    """
+
+    :param telegram.Bot bot:
+    :param telegram.Update update:
+    """
+    bot.send_message('Hi. Use /newtoken to generate a new token.')
+
+
+@command_handler('newtoken')
+def cmd_start(bot, update):
+    """
+
+    :param telegram.Bot bot:
+    :param telegram.Update update:
+    """
+
+    tokens_for_chat_id = ChatTokenRepository.get_tokens_by_chat_id(update.effective_chat.id)
+    if len(tokens_for_chat_id) > CHAT_TOKENS_LIMIT:
+        bot.send_message(update.effective_chat.id, f'Limit of tokens of {CHAT_TOKENS_LIMIT} is exceeded. Use /listtokens to see all of your tokens.')
         return
-    except Exception as err:
-        logging.error(f'Could not send message to chat_id = {chat_id}')
-        raise err
+    while True:
+        new_token = generate_token()
+        if ChatTokenRepository.save_token_for_chat_id(update.effective_chat.id, new_token):
+            break
+    bot.send_message(update.effective_chat.id, new_token)
 
 
-command_pattern = re.compile(fr'^(\/\w+)(?:@\w+bot)(?:\s+(.*)\s+$|$)')
+@command_handler('listtokens')
+def cmd_listtokens(bot, update):
+    """
+
+    :param telegram.Bot bot:
+    :param telegram.Update update:
+    """
+    tokens = ChatTokenRepository.get_tokens_by_chat_id(update.effective_chat.id)
+    bot.send_message(update.effective_chat.id, '\n'.join(tokens))
 
 
-def parse_bot_command(text):
-    match = command_pattern.match(text)
-    if match is None:
-        return None, None
-    return match.group(1), match.group(2)
+@command_handler('ping')
+def cmd_ping(bot, update):
+    """
+
+    :param telegram.Bot bot:
+    :param telegram.Update update:
+    """
+    bot.send_message(update.effective_chat.id, 'Pong :wink:')
+
+
+@command_handler('deltoken', pass_args=True)
+def cmd_deltoken(bot, update, tokens):
+    """
+
+    :param telegram.Bot bot:
+    :param telegram.Update update:
+    :param list[str] tokens:
+    """
+    message = update.effective_message  # type: telegram.Message
+    ChatTokenRepository.delete_tokens(tokens, update.effective_chat.id)
+    bot.send_message(update.effective_chat.id, 'Done. :heavy_check_mark:')
 
 
 # = = = = =
@@ -188,17 +259,8 @@ class MessageHandler(tornado.web.RequestHandler):
             self.write(json.dumps({'result': 'error', 'description': 'parse mode is unknown'}))
             return
 
-        payload = {
-            'chat_id': str(chat_id),
-            'text': message,
-            'disable_web_page_preview': 'true',
-        }
-
-        if mode:
-            payload.update({'parse_mode': mode})
-
         try:
-            _ = urllib.request.urlopen(BASE_URL + 'sendMessage', urllib.parse.urlencode(payload)).read()
+            bot.send_message(chat_id, message, parse_mode=mode)
             self.write(json.dumps({'result': 'ok'}))
         except Exception:
             self.write(json.dumps({'result': 'error', 'description': 'could not send message to telegram'}))
@@ -208,63 +270,23 @@ class TelegramHookHandler(tornado.web.RequestHandler):
 
     @in_thread
     def post(self):
-        body = json.loads(self.request.body)
-
-        update_id = body['update_id']
-        message = body['message']
-
-        message_id = message.get('message_id')
-        date = message.get('date')
-        text = message.get('text')
-        from_ = message.get('from')
-
-        chat = message['chat']
-        chat_id = chat['id']
-        chat_type = chat['type']
-
-        if not text:
-            return
-
-        command, args = parse_bot_command(text)
-        if command is None:
-            send_message_to_chat(chat_id, 'Not a command.')
-            return
-        elif command == '/start':
-            send_message_to_chat(chat_id, 'Hi. Use /newtoken to generate a new token.')
-            return
-        elif command == '/newtoken':
-            tokens_for_chat_id = ChatTokenRepository.get_tokens_by_chat_id(chat_id)
-            if len(tokens_for_chat_id) > CHAT_TOKENS_LIMIT:
-                send_message_to_chat(chat_id, f'Limit of tokens of {CHAT_TOKENS_LIMIT} is exceeded. Use /listtokens to see all of your tokens.')
-                return
-            while True:
-                new_token = generate_token()
-                if ChatTokenRepository.save_token_for_chat_id(chat_id, new_token):
-                    break
-            send_message_to_chat(chat_id, new_token)
-            return
-        elif command == '/listtokens':
-            tokens = ChatTokenRepository.get_tokens_by_chat_id(chat_id)
-            send_message_to_chat(chat_id, '\n'.join(tokens))
-            return
-        elif command == '/ping':
-            send_message_to_chat(chat_id, 'Pong :wink:')
-            return
-        elif command == '/deltoken':
-            tokens = args.split()
-            ChatTokenRepository.delete_tokens(tokens, chat_id)
-            send_message_to_chat(chat_id, 'Done. :heavy_check_mark:')
-            return
-        else:
-            send_message_to_chat(chat_id, 'What? :sweat_smile:')
-            return
+        update = telegram.Update.de_json(json.loads(self.request.body), bot)
+        bot_dispatcher.process_update(update)
 
 
-if __name__ == '__main__':
+def main():
     app = tornado.web.Application([
         (r'/(?P<token>.*?)/send', MessageHandler),
         (rf'/{HOOK_TOKEN}/hook', TelegramHookHandler),
     ])
 
-    server = app.listen(TORNADO_PORT)
-    tornado.ioloop.IOLoop.instance()
+    app.listen(TORNADO_PORT)
+
+    bot.delete_webhook()
+    bot.set_webhook(BOT_URL + f'/{HOOK_TOKEN}/hook')
+
+    tornado.ioloop.IOLoop.instance().start()
+
+
+if __name__ == '__main__':
+    main()
