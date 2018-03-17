@@ -4,3 +4,4 @@ asyncio
 sqlalchemy
 telegram
 python-telegram-bot
+emoji

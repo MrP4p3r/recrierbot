@@ -5,31 +5,40 @@ import json
 import random
 import string
 import asyncio
+import logging
 import multiprocessing.pool
-
-import telegram
-import telegram.ext
 
 import sqlalchemy as sa
 from sqlalchemy.engine.url import URL as DatabaseURL
 
+import telegram
+import telegram.ext
+
 import tornado.web
 import tornado.ioloop
+
+import emoji
 
 
 BOT_URL = os.environ['BOT_URL'].rstrip('/') + '/'
 TOKEN = os.environ['TELEGRAM_TOKEN']
 
-CHAT_TOKENS_LIMIT = os.environ.get('CHAT_TOKENS_LIMIT', 7)
+CHAT_TOKENS_LIMIT = int(os.environ.get('CHAT_TOKENS_LIMIT', 7))
 
 DB_PATH = os.environ.get('DB_PATH', '/var/lib/recrierbot/db.sqlite3')
 THREADS_NUMBER = int(os.environ.get('THREADS_NUMBER', 4))
 TORNADO_PORT = int(os.environ.get('TORNADO_PORT', 8080))
 
 
+logging.getLogger().setLevel(logging.INFO)
+logging.getLogger('tornado.access').setLevel(logging.INFO)
+logging.getLogger('tornado.general').setLevel(logging.INFO)
+logging.getLogger('tornado.application').setLevel(logging.INFO)
+
+
 # = = = = =
 
-db_url = DatabaseURL('sqlite', database='/var/lib/qeq.db')
+db_url = DatabaseURL('sqlite', database=DB_PATH)
 db_engine = sa.create_engine(db_url)
 meta = sa.MetaData(bind=db_engine)
 
@@ -66,11 +75,11 @@ class ChatTokenRepository:
 
     @staticmethod
     def save_token_for_chat_id(chat_id, token):
-        token_exists = sa.select([
+        token_exists = chat_token_t.bind.scalar(sa.select([
             sa.exists([
                 chat_token_t.select().where(sa.and_(chat_token_t.c.token == token)).limit(1)
             ])
-        ]).scalar()
+        ]))
 
         if token_exists:
             return False
@@ -126,16 +135,6 @@ def message_handler(fn):
     return fn
 
 
-@message_handler
-def msg_hahndler(bot, update):
-    """
-
-    :param telegram.Bot bot:
-    :param telegram.Update update:
-    """
-    bot.send_message(update.effective_chat.id, 'What? :sweat_smile:')
-
-
 @command_handler('start')
 def cmd_start(bot, update):
     """
@@ -143,11 +142,11 @@ def cmd_start(bot, update):
     :param telegram.Bot bot:
     :param telegram.Update update:
     """
-    bot.send_message('Hi. Use /newtoken to generate a new token.')
+    bot.send_message(update.effective_chat.id, 'Hi. Use /newtoken to generate a new token.')
 
 
 @command_handler('newtoken')
-def cmd_start(bot, update):
+def cmd_newtoken(bot, update):
     """
 
     :param telegram.Bot bot:
@@ -173,7 +172,7 @@ def cmd_listtokens(bot, update):
     :param telegram.Update update:
     """
     tokens = ChatTokenRepository.get_tokens_by_chat_id(update.effective_chat.id)
-    bot.send_message(update.effective_chat.id, '\n'.join(tokens))
+    bot.send_message(update.effective_chat.id, '\n'.join(tokens) or 'No tokens are created.')
 
 
 @command_handler('ping')
@@ -183,7 +182,7 @@ def cmd_ping(bot, update):
     :param telegram.Bot bot:
     :param telegram.Update update:
     """
-    bot.send_message(update.effective_chat.id, 'Pong :wink:')
+    bot.send_message(update.effective_chat.id, emoji.emojize('Pong :wink:', use_aliases=True))
 
 
 @command_handler('deltoken', pass_args=True)
@@ -196,7 +195,17 @@ def cmd_deltoken(bot, update, tokens):
     """
     message = update.effective_message  # type: telegram.Message
     ChatTokenRepository.delete_tokens(tokens, update.effective_chat.id)
-    bot.send_message(update.effective_chat.id, 'Done. :heavy_check_mark:')
+    bot.send_message(update.effective_chat.id, emoji.emojize('Done. :heavy_check_mark:', use_aliases=True))
+
+
+@message_handler
+def msg_hahndler(bot, update):
+    """
+
+    :param telegram.Bot bot:
+    :param telegram.Update update:
+    """
+    bot.send_message(update.effective_chat.id, emoji.emojize('What? :sweat_smile:', use_aliases=True))
 
 
 # = = = = =
@@ -222,13 +231,14 @@ class MessageHandler(tornado.web.RequestHandler):
 
     @in_thread
     def get(self, token=None):
-        mode = self.get_argument('mode')
+        mode = self.get_argument('mode', None)
         message = self.get_argument('message')
         self.process_request({'token': token, 'message': message, 'mode': mode})
 
     @in_thread
-    def post(self):
+    def post(self, token):
         data = json.loads(self.request.body)
+        data['token'] = token
         self.process_request(data)
 
     def process_request(self, data):
@@ -239,7 +249,7 @@ class MessageHandler(tornado.web.RequestHandler):
             return
 
         mode = data.get('mode')
-        message = data.get('message')
+        message = data['message']
 
         if not message:
             self.set_status(400)
@@ -274,6 +284,43 @@ class TelegramHookHandler(tornado.web.RequestHandler):
         bot_dispatcher.process_update(update)
 
 
+class run_until_no_err:
+
+    def __init__(self, fn, err_callback=None):
+        self.fn = fn
+        self.err_callback = err_callback
+
+    def on_error(self, err_callback):
+        self.err_callback = err_callback
+
+    def __call__(self, *args, **kwargs):
+        cnt = 0
+        while True:
+            try:
+                cnt += 1
+                self.fn(*args, **kwargs)
+                break
+            except Exception as err:
+                err_cb_result = self.err_callback(err, cnt, *args, **kwargs)
+                if err_cb_result == 'stop':
+                    break
+                elif err_cb_result == 'raise':
+                    raise err
+                continue
+
+
+@run_until_no_err
+def delete_and_set_webhook():
+    bot.delete_webhook()
+    logging.info(f'Setting webhook to {BOT_URL}{HOOK_TOKEN}/hook')
+    bot.set_webhook(f'{BOT_URL}{HOOK_TOKEN}/hook')
+
+
+@delete_and_set_webhook.on_error
+def _(err, cnt):
+    logging.warning(f'Failed to set webhook. Retrying')
+
+
 def main():
     app = tornado.web.Application([
         (r'/(?P<token>.*?)/send', MessageHandler),
@@ -282,10 +329,8 @@ def main():
 
     app.listen(TORNADO_PORT)
 
-    bot.delete_webhook()
-    bot.set_webhook(BOT_URL + f'/{HOOK_TOKEN}/hook')
-
-    tornado.ioloop.IOLoop.instance().start()
+    asyncio.get_event_loop().call_later(5, delete_and_set_webhook)
+    tornado.ioloop.IOLoop.current().start()
 
 
 if __name__ == '__main__':
