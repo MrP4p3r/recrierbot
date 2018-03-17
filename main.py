@@ -6,6 +6,7 @@ import random
 import string
 import asyncio
 import logging
+import collections
 import multiprocessing.pool
 
 import sqlalchemy as sa
@@ -70,20 +71,34 @@ meta.create_all(checkfirst=True)
 
 class ChatTokenRepository:
 
-    @staticmethod
-    def get_tokens_by_chat_id(chat_id):
+    _chat_id_to_tokens = collections.defaultdict(lambda: [])
+    """:type: dict[int, list[str]]"""
+
+    _token_to_chat_id = {}
+    """:type: dict[str, int]"""
+
+    @classmethod
+    def get_tokens_by_chat_id(cls, chat_id):
+        if chat_id in cls._chat_id_to_tokens:
+            return cls._chat_id_to_tokens[chat_id]
+
         tokens = [
             row.token
             for row in sa.select([chat_token_t.c.token]).where(chat_token_t.c.chat_id == chat_id).execute().fetchall()
         ]
+
+        cls._chat_id_to_tokens[chat_id] = tokens
         return tokens
 
-    @staticmethod
-    def get_chat_id_by_token(token):
-        return sa.select([chat_token_t.c.chat_id]).where(chat_token_t.c.token == token).scalar()
+    @classmethod
+    def get_chat_id_by_token(cls, token):
+        if token in cls._token_to_chat_id:
+            return cls._token_to_chat_id[token]
+        chat_id = sa.select([chat_token_t.c.chat_id]).where(chat_token_t.c.token == token).scalar()
+        cls._token_to_chat_id[token] = chat_id
 
-    @staticmethod
-    def save_token_for_chat_id(chat_id, token):
+    @classmethod
+    def save_token_for_chat_id(cls, chat_id, token):
         token_exists = chat_token_t.bind.scalar(sa.select([
             sa.exists([
                 chat_token_t.select().where(sa.and_(chat_token_t.c.token == token)).limit(1)
@@ -94,14 +109,23 @@ class ChatTokenRepository:
             return False
 
         chat_token_t.insert().values({'chat_id': chat_id, 'token': token}).execute()
+        cls._chat_id_to_tokens[chat_id].append(token)
+        cls._token_to_chat_id[token] = chat_id
         return True
 
-    @staticmethod
-    def delete_tokens(tokens, chat_id):
+    @classmethod
+    def delete_tokens(cls, tokens, chat_id):
         query = chat_token_t.delete.where(chat_token_t.c.token.in_(tokens))
         if chat_id:
             query = query.where(chat_token_t.c.chat_id == chat_id)
-        return query.execute().rowcount
+        rowcount = query.execute().rowcount
+        if rowcount:
+            cls._chat_id_to_tokens.pop(chat_id)
+            for token in tokens:
+                cls._token_to_chat_id.pop(token)
+            return rowcount
+        else:
+            return False
 
 
 # = = = = =
