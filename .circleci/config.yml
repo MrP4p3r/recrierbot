@@ -11,19 +11,22 @@ jobs:
           name: Check what's in /repo
           command: ls /repo
       - run:
-          name: Build bot's python server into single executable
+          name: Build alpine bot server binary
           command: |
-            docker run --rm -ti -v /repo:/src --entrypoint sh mrp4p3r/pyinstaller-alpine-py3 -c 'ls /src/'
-            docker run --rm -v /repo:/src mrp4p3r/pyinstaller-alpine-py3 \
+            docker run -d --entrypoint sh --name botserver-builder mrp4p3r/pyintaller-alpine-py3 -c 'sleep 1h'
+            docker cp /repo botserver-builder:/src
+            docker exec botserver-builder /pyinstaller/pyinstaller.sh \
                 --noconfirm --log-level DEBUG --distpath /src/dist-alpine main.py
+            mkdir -p /repo/dist-alpine
+            docker cp /src/dist-alpine/main /repo/dist-alpine
       - run:
           name: Build Docker image for bot
-          command: docker build -t botimage .
+          command: docker build -t app .
       - deploy:
           name: Push Docker image
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               docker login -u $DOCKER_USER -p $DOCKER_PASS
-              docker tag botimage mrp4p3r/recrierbot
+              docker tag app mrp4p3r/recrierbot
               docker push mrp4p3r/recrierbot
             fi
