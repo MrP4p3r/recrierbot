@@ -1,0 +1,25 @@
+version: 2
+jobs:
+  build:
+    working_directory: /repo
+    docker:
+      - image: docker:18
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build bot's python server into single executable
+          command: |
+            docker run --rm -v /repo:/src mrp4p3r/pyinstaller-alpine-py3 \
+                --noconfirm --log-level DEBUG --distpath /src/dist-alpine /src/main.spec
+      - run:
+          name: Build Docker image for bot
+          command: docker build -t botimage .
+      - deploy:
+          name: Push Docker image
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              docker login -u $DOCKER_USER -p $DOCKER_PASS
+              docker tag botimage mrp4p3r/recrierbot
+              docker push mrp4p3r/recrierbot
+            fi
