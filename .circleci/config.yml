@@ -2,11 +2,7 @@ version: 2
 jobs:
   build:
     working_directory: /repo
-    docker:
-      - image: docker:18
-          auth:
-            username: $DOCKER_USER
-            password: $DOCKER_PASS
+    machine: true
     steps:
       - checkout
       - setup_remote_docker
@@ -34,7 +30,7 @@ jobs:
           name: Push Docker image
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker login
+              docker login -u $DOCKER_USER -p $DOCKER_PASS
               docker tag app mrp4p3r/recrierbot
               docker push mrp4p3r/recrierbot
             fi
