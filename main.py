@@ -38,7 +38,8 @@ else:
     try:
         LOGLEVEL = getattr(logging, LOGLEVEL)
     except Exception:
-        logging.exception(f'No such logging level: {LOGLEVEL}')
+        logging.exception(f'No such logging level: {LOGLEVEL}. Using default: WARNING')
+        LOGLEVEL = logging.WARNING
 
 logging.getLogger().setLevel(LOGLEVEL)
 logging.getLogger('tornado.access').setLevel(LOGLEVEL)
