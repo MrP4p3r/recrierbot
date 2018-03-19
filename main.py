@@ -14,6 +14,7 @@ from sqlalchemy.engine.url import URL as DatabaseURL
 
 import telegram
 import telegram.ext
+from telegram.ext.filters import Filters
 
 import tornado.web
 import tornado.ioloop
@@ -156,16 +157,37 @@ bot = telegram.Bot(TOKEN)
 bot_dispatcher = telegram.ext.Dispatcher(bot, None, workers=0)
 
 
+def filter_by_chat_type(chat_types):
+    """
+    :param list[str] chat_types:
+    :rtype: telegram.ext.BaseFilter
+    """
+    return type('FilterBy{}Chat'.format('And'.join([chat_type.title() for chat_type in chat_types])),
+                (telegram.ext.BaseFilter,),
+                {'filter': lambda message: message.chat.type in chat_types})
+
+
 def command_handler(cmd_name, **kwargs):
     def outer(fn):
-        handler = telegram.ext.CommandHandler(cmd_name, fn, **kwargs)
+        filters = (
+            Filters.entity(telegram.MessageEntity.MENTION) | filter_by_chat_type([telegram.Chat.PRIVATE])
+        )
+
+        for passed_filter in kwargs.pop('filters'):
+            filters &= passed_filter
+
+        handler = telegram.ext.CommandHandler(cmd_name, fn, filters=filters, **kwargs)
         bot_dispatcher.add_handler(handler)
         return fn
     return outer
 
 
 def message_handler(fn):
-    handler = telegram.ext.MessageHandler(None, fn)
+    filters = (
+        Filters.text
+        & (Filters.entity(telegram.MessageEntity.MENTION) | (filter_by_chat_type([telegram.Chat.PRIVATE])))
+    )
+    handler = telegram.ext.MessageHandler(filters, fn)
     bot_dispatcher.add_handler(handler)
     return fn
 
@@ -220,7 +242,7 @@ def cmd_ping(bot, update):
     bot.send_message(update.effective_chat.id, emoji.emojize('Pong :wink:', use_aliases=True))
 
 
-@command_handler('deltoken', pass_args=True)
+@command_handler('deltoken')
 def cmd_deltoken(bot, update, args=None):
     """
 
