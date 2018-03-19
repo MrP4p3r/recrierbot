@@ -164,7 +164,7 @@ def filter_by_chat_type(chat_types):
     """
     return type('FilterBy{}Chat'.format('And'.join([chat_type.title() for chat_type in chat_types])),
                 (telegram.ext.BaseFilter,),
-                {'filter': lambda message: message.chat.type in chat_types})()
+                {'filter': lambda slf, message: message.chat.type in chat_types})()
 
 
 def command_handler(cmd_name, **kwargs):
@@ -185,7 +185,7 @@ def command_handler(cmd_name, **kwargs):
 def message_handler(fn):
     filters = (
         Filters.text
-        & (Filters.entity(telegram.MessageEntity.MENTION) | (filter_by_chat_type([telegram.Chat.PRIVATE])))
+        & (Filters.entity(telegram.MessageEntity.MENTION) | filter_by_chat_type([telegram.Chat.PRIVATE]))
     )
     handler = telegram.ext.MessageHandler(filters, fn)
     bot_dispatcher.add_handler(handler)
