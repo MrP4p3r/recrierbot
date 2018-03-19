@@ -164,7 +164,7 @@ def filter_by_chat_type(chat_types):
     """
     return type('FilterBy{}Chat'.format('And'.join([chat_type.title() for chat_type in chat_types])),
                 (telegram.ext.BaseFilter,),
-                {'filter': lambda message: message.chat.type in chat_types})
+                {'filter': lambda message: message.chat.type in chat_types})()
 
 
 def command_handler(cmd_name, **kwargs):
