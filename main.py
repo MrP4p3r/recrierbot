@@ -157,6 +157,14 @@ bot = telegram.Bot(TOKEN)
 bot_dispatcher = telegram.ext.Dispatcher(bot, None, workers=0)
 
 
+class FilterCommandWithMention(telegram.ext.BaseFilter):
+
+    def filter(self, message):
+        if message.bot.username in message.text.split()[0].split('@')[1:]:
+            return True
+        return False
+
+
 def filter_by_chat_type(chat_types):
     """
     :param list[str] chat_types:
@@ -170,7 +178,7 @@ def filter_by_chat_type(chat_types):
 def command_handler(cmd_name, **kwargs):
     def outer(fn):
         filters = (
-            Filters.entity(telegram.MessageEntity.MENTION) | filter_by_chat_type([telegram.Chat.PRIVATE])
+            FilterCommandWithMention() | filter_by_chat_type([telegram.Chat.PRIVATE])
         )
 
         for passed_filter in kwargs.pop('filters', []):
