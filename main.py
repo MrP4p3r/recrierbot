@@ -173,7 +173,7 @@ def command_handler(cmd_name, **kwargs):
             Filters.entity(telegram.MessageEntity.MENTION) | filter_by_chat_type([telegram.Chat.PRIVATE])
         )
 
-        for passed_filter in kwargs.pop('filters'):
+        for passed_filter in kwargs.pop('filters', []):
             filters &= passed_filter
 
         handler = telegram.ext.CommandHandler(cmd_name, fn, filters=filters, **kwargs)
