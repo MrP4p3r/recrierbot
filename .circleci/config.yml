@@ -1,24 +1,46 @@
 version: 2
+
 jobs:
+
   build:
-    working_directory: /repo
+    working_directory: ~/repo
     docker:
       - image: docker:18
     steps:
       - checkout
       - setup_remote_docker
       - run:
-          name: Build alpine bot server binary
+          name: Build server app as alpine binary
           command: |
             docker run -d --entrypoint sh --name botserver-builder mrp4p3r/pyinstaller-alpine-py3 -c 'sleep 1h'
-            docker cp /repo/. botserver-builder:/src
+            docker cp ~/repo/. botserver-builder:/src
             docker exec botserver-builder /pyinstaller/pyinstaller.sh \
                 --noconfirm --log-level DEBUG --distpath /src/dist-alpine -F main.py
-            mkdir -p /repo/dist-alpine
-            docker cp botserver-builder:/src/dist-alpine/main /repo/dist-alpine
+            mkdir -p ~/repo/dist-alpine
+            docker cp botserver-builder:/src/dist-alpine/main ~/repo/dist-alpine
       - run:
-          name: Build Docker image for bot
+          name: Build Docker image for app
           command: docker build -t mrp4p3r/recrierbot .
+      - run:
+          name: docker save build image
+          command: |
+            mkdir -p ~/images/ || true
+            docker save -o ~/images/mrp4p3r.recrierbot.tar mrp4p3r/recrierbot
+      - save_cache:
+          key: image-recrierbot-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/images
+
+  docker-push:
+    docker:
+      - image: docker:18
+    steps:
+      - restore_cache:
+          key: image-recrierbot-{{ .Environment.CIRCLE_SHA1 }}
+      - run:
+          name: Restore recrierbot image
+          command: |
+            docker load -i ~/images/mrp4p3r.recrierbot.tar
       - deploy:
           name: Push Docker image
           command: |
@@ -26,3 +48,15 @@ jobs:
               docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
               docker push mrp4p3r/recrierbot
             fi
+
+workflows:
+
+  build-and-push:
+    jobs:
+      - build
+      - docker-push:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
