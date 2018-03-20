@@ -37,6 +37,7 @@ jobs:
     steps:
       - restore_cache:
           key: image-recrierbot-{{ .Environment.CIRCLE_SHA1 }}
+      - setup_remote_docker
       - run:
           name: Restore recrierbot image
           command: |
