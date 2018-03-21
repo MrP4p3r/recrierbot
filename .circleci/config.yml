@@ -20,9 +20,11 @@ jobs:
             docker cp botserver-builder:/src/dist-alpine/main ~/repo/dist-alpine
       - run:
           name: Build Docker image for app
-          command: docker build -t mrp4p3r/recrierbot .
+          command: |
+            chmod +x ~/repo/start.sh ~/repo/dist-alpine/main
+            docker build -t mrp4p3r/recrierbot .
       - run:
-          name: docker save build image
+          name: docker save image
           command: |
             mkdir -p ~/images/ || true
             docker save -o ~/images/mrp4p3r.recrierbot.tar mrp4p3r/recrierbot
