@@ -1,10 +1,8 @@
 FROM docker:18
 COPY ./. /src
-RUN docker run --name botserver-builder -v /src:/src
+RUN docker run --name botserver-builder -v /src:/src \
         mrp4p3r/pyinstaller-alpine-py3 \
-            --noconfirm --log-level DEBUG --distpath /src/dist-alpine -F main.py
-            mkdir -p ~/repo/dist-alpine
-            docker cp botserver-builder:/src/dist-alpine/main ~/src/dist-alpine && \
+            --noconfirm --log-level DEBUG --distpath /src/dist-alpine -F main.py \
     chmod +x /src/dist-alpine/main /src/start.sh
 
 FROM alpine:3.7
