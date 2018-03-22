@@ -10,19 +10,8 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Build server app as alpine binary
-          command: |
-            docker run -d --entrypoint sh --name botserver-builder mrp4p3r/pyinstaller-alpine-py3 -c 'sleep 1h'
-            docker cp ~/repo/. botserver-builder:/src
-            docker exec botserver-builder /pyinstaller/pyinstaller.sh \
-                --noconfirm --log-level DEBUG --distpath /src/dist-alpine -F main.py
-            mkdir -p ~/repo/dist-alpine
-            docker cp botserver-builder:/src/dist-alpine/main ~/repo/dist-alpine
-      - run:
-          name: Build Docker image for app
-          command: |
-            chmod +x ~/repo/start.sh ~/repo/dist-alpine/main
-            docker build -t mrp4p3r/recrierbot .
+          name: Build Docker container
+          command: docker build -t mrp4p3r/recrierbot .
       - run:
           name: docker save image
           command: |
