@@ -7,3 +7,4 @@ build/
 dist/
 dist-alpine/
 *.spec
+.venv
