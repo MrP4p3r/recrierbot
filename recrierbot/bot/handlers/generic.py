@@ -5,29 +5,15 @@ import logging
 from aiogram import Dispatcher
 from aiogram.types import Message, Update
 from aiogram.utils.emoji import emojize
-from aiogram.dispatcher.filters import Filter, AnyFilter
+from aiogram.dispatcher.filters import AnyFilter
 
-
-class NotCommandFilter(Filter):
-
-    def check(self, obj):
-        return bool(isinstance(obj, Message) and not obj.is_command())
-
-
-class UnknownCommand(Filter):
-
-    known_commands = ['start', 'newtoken', 'deltoken', 'listtokens', 'ping']
-
-    def check(self, obj):
-        return bool(isinstance(obj, Message)
-                    and obj.is_command()
-                    and obj.get_command(pure=True) not in self.known_commands)
+from .filters import CommandFilter, NotCommandFilter, UnknownCommand
 
 
 def handler_generic(dispatcher: Dispatcher):
     bot = dispatcher.bot
 
-    @dispatcher.message_handler(commands=['ping'])
+    @dispatcher.message_handler(CommandFilter(bot, 'ping'))
     async def handle_ping(message: Message):
         await bot.send_message(message.chat.id, emojize('Pong :wink:'))
 

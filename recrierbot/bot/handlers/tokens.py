@@ -6,12 +6,13 @@ from aiogram.types import ParseMode
 from aiogram.utils.emoji import emojize
 
 from recrierbot.domain import DomainRoot
+from .filters import CommandFilter
 
 
 def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
     bot = dispatcher.bot
 
-    @dispatcher.message_handler(commands=['newtoken'])
+    @dispatcher.message_handler(CommandFilter(bot, 'newtoken'))
     async def handle_newtoken(message: Message):
         tokens_for_chat = await domain.repo.token.find_tokens(message.chat.id)
 
@@ -31,7 +32,7 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
             parse_mode=ParseMode.MARKDOWN
         )
 
-    @dispatcher.message_handler(commands=['listtokens'])
+    @dispatcher.message_handler(CommandFilter(bot, 'listtokens'))
     async def handle_listtokens(message: Message):
         tokens = await domain.repo.token.find_tokens(message.chat.id)
         if not tokens:
@@ -41,7 +42,7 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
 
         await bot.send_message(message.chat.id, text)
 
-    @dispatcher.message_handler(commands=['deltoken'])
+    @dispatcher.message_handler(CommandFilter(bot, 'deltoken'))
     async def handle_deltoken(message: Message):
         token_values_to_delete = message.get_args().split()
         if not token_values_to_delete:
