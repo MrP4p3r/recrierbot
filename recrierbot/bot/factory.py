@@ -42,7 +42,7 @@ async def make_bot(settings: BotSettings, domain: DomainRoot) -> BotCommunicator
     if settings.base_bot_url:
         hook_token = _generate_hook_token()
         hook_url = settings.base_bot_url + hook_token + '/hook'
-        logging.warning('Base bot URL is provided. Web hook URL: {hook_url!r}')
+        logging.warning(f'Base bot URL is provided. Web hook URL: {hook_url!r}')
         logging.warning('Settings web hook...')
         await bot.set_webhook(hook_url)
         logging.warning('Web hook is set')
