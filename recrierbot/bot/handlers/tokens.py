@@ -9,7 +9,7 @@ from recrierbot.domain import DomainRoot
 from .filters import CommandFilter
 
 
-def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
+def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot, base_bot_url: str):
     bot = dispatcher.bot
 
     @dispatcher.message_handler(CommandFilter(bot, 'newtoken'))
@@ -25,9 +25,12 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
             return
 
         new_token = await domain.tokens.create(message.chat.id)
+        url_template = base_bot_url + new_token + '/send'
+        text = f'Here\'s your new token: `{new_token}`\n'
+        text += f'Url template: `{url_template}`'
         await bot.send_message(
             message.chat.id,
-            text=f'Here\'s your new token: `{new_token}`',
+            text=text,
             parse_mode=ParseMode.MARKDOWN
         )
 
@@ -37,9 +40,9 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
         if not tokens:
             text = 'No tokens are created.'
         else:
-            text = '\n'.join((token for token in tokens))
+            text = 'Tokens for this chat:\n' + '\n'.join((f'`{token}`' for token in tokens))
 
-        await bot.send_message(message.chat.id, text)
+        await bot.send_message(message.chat.id, text, parse_mode=ParseMode.MARKDOWN)
 
     @dispatcher.message_handler(CommandFilter(bot, 'deltoken'))
     async def handle_deltoken(message: Message):

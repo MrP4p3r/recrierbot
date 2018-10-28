@@ -35,7 +35,7 @@ async def make_bot(settings: BotSettings, domain: DomainRoot) -> BotCommunicator
     state_storage = MemoryStorage()
     dispatcher = aiogram.Dispatcher(bot, storage=state_storage)
 
-    routes.check_in(dispatcher, domain)
+    routes.check_in(dispatcher, domain, settings.base_bot_url)
 
     hook_token = None
 
