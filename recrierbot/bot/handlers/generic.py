@@ -1,5 +1,7 @@
 """Generic message handlers."""
 
+import logging
+
 from aiogram import Dispatcher
 from aiogram.types import Message, Update
 from aiogram.utils.emoji import emojize
@@ -35,4 +37,5 @@ def handler_generic(dispatcher: Dispatcher):
 
     @dispatcher.errors_handler()
     async def error_handler(_, update: Update, exc: BaseException):
+        logging.exception('Something went wrong...')
         await bot.send_message(update.message.chat.id, 'Something went wrong :-0')

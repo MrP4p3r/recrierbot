@@ -1,5 +1,6 @@
 """Initialization root."""
 
+import logging
 import aiohttp.web
 
 from .logging import configure_logging
@@ -12,7 +13,14 @@ from .routes import make_aiohttp_routes
 
 def run_app():
     settings = Settings()
-    aiohttp.web.run_app(make_app(settings), host=settings.web.bind, port=settings.web.port)
+
+    logging.warning(f'Using {settings.web.bind}:{settings.web.port}')
+    aiohttp.web.run_app(
+        make_app(settings),
+        host=settings.web.bind,
+        port=settings.web.port,
+        print=None,
+    )
 
 
 async def make_app(settings: Settings) -> aiohttp.web.Application:
@@ -24,5 +32,9 @@ async def make_app(settings: Settings) -> aiohttp.web.Application:
 
     app = aiohttp.web.Application()
     make_aiohttp_routes(app, bot, domain)
+
+    @app.on_startup.append
+    async def on_app_startup(_):
+        logging.warning('App was started.')
 
     return app

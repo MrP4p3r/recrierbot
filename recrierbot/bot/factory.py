@@ -1,5 +1,6 @@
 """Creating bot object."""
 
+import logging
 import asyncio
 
 import aiogram
@@ -25,9 +26,15 @@ class BotCommunicator(object):
 
 
 async def make_bot(settings: BotSettings, domain: DomainRoot) -> BotCommunicator:
-    bot = aiogram.Bot(settings.telegram_token, proxy=settings.socks5_proxy)
+    proxy = None
+    if settings.socks5_proxy is not None:
+        proxy = settings.socks5_proxy
+        logging.warning(f'Using socks5_proxy {proxy!r} for Telegram API.')
+
+    bot = aiogram.Bot(settings.telegram_token, proxy=proxy)
     state_storage = MemoryStorage()
     dispatcher = aiogram.Dispatcher(bot, storage=state_storage)
+
     routes.check_in(dispatcher, domain)
 
     hook_token = None
@@ -35,10 +42,15 @@ async def make_bot(settings: BotSettings, domain: DomainRoot) -> BotCommunicator
     if settings.base_bot_url:
         hook_token = _generate_hook_token()
         hook_url = settings.base_bot_url + hook_token + '/hook'
+        logging.warning('Base bot URL is provided. Web hook URL: {hook_url!r}')
+        logging.warning('Settings web hook...')
         await bot.set_webhook(hook_url)
+        logging.warning('Web hook is set')
     else:
         # FIXME: Starting polling as a coroutine. Can this fail somehow? Who nose...
+        logging.warning('Base bot URL is not provided. Using polling.')
         asyncio.create_task(dispatcher.start_polling(reset_webhook=True))
+        logging.warning('Polling task was created.')
 
     return BotCommunicator(bot, dispatcher, hook_token=hook_token)
 

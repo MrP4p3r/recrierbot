@@ -2,6 +2,7 @@
 
 import os
 import logging
+from typing import Union
 
 
 class Settings(object):
@@ -43,8 +44,8 @@ class WebServerSettings(object):
 class BotSettings(object):
 
     telegram_token: str
-    base_bot_url: str
-    socks5_proxy: str
+    base_bot_url: Union[str, None]
+    socks5_proxy: Union[str, None]
 
     def __init__(self):
         self.telegram_token = os.environ['TELEGRAM_TOKEN']
@@ -63,6 +64,7 @@ class DomainSettings(object):
     def __init__(self):
         if os.environ.get('CHAT_TOKENS_LIMIT'):
             logging.warning('CHAT_TOKENS_LIMIT variable is deprecated. Use USER_TOKENS_LIMIT')
+
         self.user_tokens_limit = int(
             os.environ.get('USER_TOKENS_LIMIT')
             or os.environ.get('CHAT_TOKENS_LIMIT')
