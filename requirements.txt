@@ -1,7 +1,8 @@
 # Requirements for recrierbot
-tornado==5.0.0
-asyncio
+
+aiohttp
+sqlalchemy-aio
 sqlalchemy
-telegram
-python-telegram-bot
+aiogram
 emoji
+aiosocksy
