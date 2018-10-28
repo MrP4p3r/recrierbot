@@ -14,7 +14,7 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
 
     @dispatcher.message_handler(CommandFilter(bot, 'newtoken'))
     async def handle_newtoken(message: Message):
-        tokens_for_chat = await domain.repo.token.find_tokens(message.chat.id)
+        tokens_for_chat = await domain.tokens.find_tokens(message.chat.id)
 
         if len(tokens_for_chat) > domain.settings.user_tokens_limit:
             await bot.send_message(
@@ -24,8 +24,7 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
             )
             return
 
-        new_token = domain.factory.token.create()
-        await domain.repo.token.add(message.chat.id, new_token)
+        new_token = await domain.tokens.create(message.chat.id)
         await bot.send_message(
             message.chat.id,
             text=f'Here\'s your new token: `{new_token}`',
@@ -34,7 +33,7 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
 
     @dispatcher.message_handler(CommandFilter(bot, 'listtokens'))
     async def handle_listtokens(message: Message):
-        tokens = await domain.repo.token.find_tokens(message.chat.id)
+        tokens = await domain.tokens.find_tokens(message.chat.id)
         if not tokens:
             text = 'No tokens are created.'
         else:
@@ -51,5 +50,5 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
                                    '\\deltoken a1Bd3f 7ab1cd ...')
             return
 
-        await domain.repo.token.delete(token_values_to_delete, chat_id=message.chat.id)
+        await domain.tokens.delete(token_values_to_delete, chat_id=message.chat.id)
         await bot.send_message(message.chat.id, emojize('Done. :heavy_check_mark:'))

@@ -36,7 +36,7 @@ class SendMessageHandler(object):
         if not message:
             return json_response({'result': 'error', 'error': 'empty_message'}, status=400)
 
-        chat_id = await self._domain.repo.token.find_chat_id(token)
+        chat_id = await self._domain.tokens.find_chat_id(token)
         if not chat_id:
             return json_response({'result': 'error', 'error': 'bad_token'}, status=400)
 

@@ -1,13 +1,17 @@
 """Simpe token repository."""
 
+import string
+import random
 import collections
 from typing import Dict, List
+
 import sqlalchemy as sa
+
 from recrierbot.db import chat_token_t
 
 
-class TokenRepository(object):
-    """Not really a TOKEN repository. But worse is better, right?"""
+class Tokens(object):
+    """Tokens repository (kind of). Simple and poor. Worse is better, right?"""
 
     _chat_id_to_tokens: Dict[int, List[str]]
     _token_to_chat_id: Dict[str, int]
@@ -17,13 +21,18 @@ class TokenRepository(object):
         self._chat_id_to_tokens = collections.defaultdict(list)
         self._token_to_chat_id = {}
 
-    async def add(self, chat_id: int, token: str):
+    async def create(self, chat_id: int) -> str:
+        alphabet = string.digits + string.ascii_letters
+        token = ''.join(random.sample(alphabet, 32))
+
         conn = await self._get_connection()
         await conn.execute(
             chat_token_t.insert().values({'chat_id': chat_id, 'token': token})
         )
         self._chat_id_to_tokens[chat_id].append(token)
         self._token_to_chat_id[token] = chat_id
+
+        return token
 
     async def find_tokens(self, chat_id: int = None) -> List[str]:
         if chat_id in self._chat_id_to_tokens:
