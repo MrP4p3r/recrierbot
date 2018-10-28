@@ -17,7 +17,7 @@ def handler_generic(dispatcher: Dispatcher):
     async def handle_ping(message: Message):
         await bot.send_message(message.chat.id, emojize('Pong :wink:'))
 
-    @dispatcher.message_handler(AnyFilter(NotCommandFilter(), UnknownCommand()))
+    @dispatcher.message_handler(AnyFilter(NotCommandFilter(bot), UnknownCommand(bot)))
     async def msg_handler(message: Message):
         await bot.send_message(message.chat.id, emojize('What? :sweat_smile:'))
 

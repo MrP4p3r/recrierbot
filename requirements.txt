@@ -1,8 +1,8 @@
 # Requirements for recrierbot
 
 aiohttp
+aiosocksy
 sqlalchemy-aio
 sqlalchemy
-aiogram
+aiogram==1.4
 emoji
-aiosocksy

@@ -11,18 +11,7 @@ from recrierbot.domain import DomainRoot
 from recrierbot.settings import BotSettings
 
 from . import routes
-
-
-class BotCommunicator(object):
-
-    def __init__(self, bot: aiogram.Bot, dispatcher: aiogram.Dispatcher, hook_token: str):
-        self.bot = bot
-        self.dispatcher = dispatcher
-        self.hook_token = hook_token
-
-    def process_update(self, update_dict: dict):
-        update = aiogram.types.Update(**update_dict)
-        asyncio.create_task(self.dispatcher.process_update(update))
+from .communicator import BotCommunicator
 
 
 async def make_bot(settings: BotSettings, domain: DomainRoot) -> BotCommunicator:
@@ -52,7 +41,7 @@ async def make_bot(settings: BotSettings, domain: DomainRoot) -> BotCommunicator
         asyncio.create_task(dispatcher.start_polling(reset_webhook=True))
         logging.warning('Polling task was created.')
 
-    return BotCommunicator(bot, dispatcher, hook_token=hook_token)
+    return BotCommunicator(bot, dispatcher, settings, hook_token=hook_token)
 
 
 def _generate_hook_token():

@@ -9,7 +9,7 @@ from recrierbot.domain import DomainRoot
 from .filters import CommandFilter
 
 
-def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot, base_bot_url: str):
+def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot, base_bot_url: str = None):
     bot = dispatcher.bot
 
     @dispatcher.message_handler(CommandFilter(bot, 'newtoken'))
@@ -25,9 +25,13 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot, base_bot_url: str
             return
 
         new_token = await domain.tokens.create(message.chat.id)
-        url_template = base_bot_url + new_token + '/send'
-        text = f'Here\'s your new token: `{new_token}`\n'
-        text += f'Url template: `{url_template}`'
+        text = f'Here\'s your new token: `{new_token}`'
+
+        # If it is None we do not know public bot url
+        if base_bot_url is not None:
+            url_template = base_bot_url + new_token + '/send'
+            text += f'Url template: `{url_template}`'
+
         await bot.send_message(
             message.chat.id,
             text=text,

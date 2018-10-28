@@ -20,13 +20,10 @@ class CommandFilter(AsyncFilter):
         command = message.text.split()[0][1:]
         command, _, mention = command.partition('@')
 
-        import logging
         if mention and mention != (await self._bot.me).username:
-            logging.warning(f'denied command because I got mention and mention {mention!r} and it is not my username')
             return False
 
-        if message.chat.type == ChatType.GROUP and not mention:
-            logging.warning(f'denied command because I got no mention but chat is a group chat')
+        if message.chat.type != ChatType.PRIVATE and not mention:
             return False
 
         if command not in self._commands:

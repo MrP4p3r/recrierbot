@@ -1,8 +1,17 @@
-from aiogram.types import Message
-from aiogram.dispatcher.filters import Filter
+from aiogram.types import Message, ChatType
+from aiogram.dispatcher.filters import AsyncFilter
 
 
-class NotCommandFilter(Filter):
+class NotCommandFilter(AsyncFilter):
 
-    def check(self, obj):
-        return bool(isinstance(obj, Message) and not obj.is_command())
+    def __init__(self, bot):
+        self._bot = bot
+
+    async def check(self, message: Message):
+        if message.is_command():
+            return False
+
+        if message.chat.type != ChatType.PRIVATE and ('@' + (await self._bot.me).username) in message.text.split():
+            return False
+
+        return True

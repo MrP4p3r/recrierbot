@@ -40,11 +40,8 @@ class SendMessageHandler(object):
         if not chat_id:
             return json_response({'result': 'error', 'error': 'bad_token'}, status=400)
 
-        if mode:
-            mode = getattr(ParseMode, mode.upper())
-
         try:
-            await self._bot.bot.send_message(chat_id, text=message, parse_mode=mode)
+            await self._bot.send_message(chat_id, text=message, parse_mode=mode)
             return json_response({'result': 'ok'}, status=200)
         except TelegramAPIError:
             return json_response({'result': 'error', 'error': 'telegram_send_message_failed'}, status=500)
