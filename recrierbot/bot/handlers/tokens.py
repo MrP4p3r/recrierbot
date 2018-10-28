@@ -51,5 +51,5 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
                                    '\\deltoken a1Bd3f 7ab1cd ...')
             return
 
-        await domain.repo.token.delete(token_values_to_delete)
+        await domain.repo.token.delete(token_values_to_delete, chat_id=message.chat.id)
         await bot.send_message(message.chat.id, emojize('Done. :heavy_check_mark:'))

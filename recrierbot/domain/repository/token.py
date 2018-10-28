@@ -52,8 +52,11 @@ class TokenRepository(object):
         self._chat_id_to_tokens[chat_id].append(token)
         return chat_id
 
-    async def delete(self, tokens: List[str]):
+    async def delete(self, tokens: List[str], chat_id: int = None):
         query = chat_token_t.delete().where(chat_token_t.c.token.in_(tokens))
+        if chat_id is not None:
+            query = query.where(chat_token_t.c.chat_id == chat_id)
+
         conn = await self._get_connection()
         result = await conn.execute(query)
 
@@ -62,7 +65,11 @@ class TokenRepository(object):
         if not rowcount:
             return
 
-        chat_ids = set((self._token_to_chat_id[token] for token in tokens if token in self._token_to_chat_id))
+        if chat_id is not None:
+            chat_ids = set((self._token_to_chat_id[token] for token in tokens if token in self._token_to_chat_id))
+        else:
+            chat_ids = {chat_id}
+
         for chat_id in chat_ids:
             self._chat_id_to_tokens[chat_id] = list(set(self._chat_id_to_tokens[chat_id]).difference(tokens))
         for token in tokens:
