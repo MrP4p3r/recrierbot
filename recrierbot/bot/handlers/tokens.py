@@ -16,7 +16,7 @@ def handler_tokens(dispatcher: Dispatcher, domain: DomainRoot):
     async def handle_newtoken(message: Message):
         tokens_for_chat = await domain.tokens.find_tokens(message.chat.id)
 
-        if len(tokens_for_chat) > domain.settings.user_tokens_limit:
+        if len(tokens_for_chat) >= domain.settings.user_tokens_limit:
             await bot.send_message(
                 message.chat.id,
                 text=f'Limit of tokens of {domain.settings.user_tokens_limit} is exceeded. '
