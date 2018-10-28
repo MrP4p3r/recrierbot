@@ -6,3 +6,4 @@ sqlalchemy-aio
 sqlalchemy
 aiogram==1.4
 emoji
+jinja2
