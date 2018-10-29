@@ -2,6 +2,27 @@ version: 2
 
 jobs:
 
+  build-fatty:
+    working_directory: ~/repo
+    docker:
+      - image: docker:18
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build fat Docker image for app
+          command: |
+            docker build -t mrp4p3r/recrierbot --file DockerfileFat .
+      - run:
+          name: Save Docker image
+          command: |
+            mkdir -p ~/images || true
+            docker save -o ~/images/mrp4p3r.recrierbot.tar mrp4p3r/recrierbot
+      - save_cache:
+          key: image-recrierbot-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/images
+
   build:
     working_directory: ~/repo
     docker:
@@ -60,7 +81,7 @@ workflows:
 
   build-and-push:
     jobs:
-      - build
+      - build-fatty
       - docker-push:
           requires:
             - build

@@ -1,0 +1,9 @@
+FROM python:3.7-alpine
+
+COPY ./lib /src
+RUN pip install /src/recrierbot
+
+COPY ./main.py /main.py
+RUN chmod u+x /main.py
+
+CMD ["python", "/main.py"]
