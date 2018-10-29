@@ -84,7 +84,7 @@ workflows:
       - build-fatty
       - docker-push:
           requires:
-            - build
+            - build-fatty
           filters:
             branches:
               only: master
