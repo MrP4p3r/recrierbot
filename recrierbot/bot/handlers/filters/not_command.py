@@ -11,7 +11,7 @@ class NotCommandFilter(AsyncFilter):
         if message.is_command():
             return False
 
-        if message.chat.type != ChatType.PRIVATE and ('@' + (await self._bot.me).username) in message.text.split():
+        if message.chat.type != ChatType.PRIVATE and ('@' + (await self._bot.me).username) not in message.text.split():
             return False
 
         return True
