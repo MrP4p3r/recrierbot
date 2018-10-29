@@ -1,9 +1,0 @@
-# Requirements for recrierbot
-
-aiohttp
-aiosocksy
-sqlalchemy-aio
-sqlalchemy
-aiogram==1.4
-emoji
-jinja2
