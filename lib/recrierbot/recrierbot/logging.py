@@ -15,12 +15,13 @@ async def configure_logging():
     log_level = logging.WARNING
     log_level_str = os.environ.get('LOGGING_LEVEL', 'WARNING')
 
+    default_loglevel_warning = False
     if log_level_str.isnumeric():
         log_level = int(log_level_str)
     elif hasattr(logging, log_level_str):
         log_level = getattr(logging, log_level_str)
     elif log_level_str != '':
-        logging.exception(f'No such logging level: {log_level}. Using default: WARNING')
+        default_loglevel_warning = True
 
     formatter = MyFormatter()
 
@@ -29,12 +30,18 @@ async def configure_logging():
 
     logger = logging.getLogger()
     logger.setLevel(log_level)
+    logger.handlers = []
     logger.addHandler(handler)
+
+    if default_loglevel_warning:
+        logging.warning(f'No such logging level: {log_level}.')
+
+    logging.warning(f'Using logging level: {log_level}')
 
 
 class MyFormatter(logging.Formatter):
 
     def __init__(self):
-        template = '[{asctime}] - [{levelname[0]}] [{module}:{lineno}] {message}'
-        dtm_template = '%y%m%d %H:%M:%S'
+        template = '[ {asctime} {levelname} - {module}:{lineno}] {message}'
+        dtm_template = '%y.%m.%d %H:%M:%S'
         super().__init__(template, dtm_template, style='{')
